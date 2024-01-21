@@ -1,7 +1,10 @@
-use rust_web_server::ThreadPool;
+pub mod server;
+
+use server::config::Config;
+use server::thread_pool::ThreadPool;
 
 use std::{
-    fs,
+    env, fs,
     io::{prelude::*, BufReader},
     net::{TcpListener, TcpStream},
     thread,
@@ -9,6 +12,7 @@ use std::{
 };
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
 
     let port = "7878";
     let ip = "127.0.0.1";
@@ -31,7 +35,7 @@ fn handle_connection(mut stream: TcpStream) {
     let request_line = buf_reader.lines().next().unwrap().unwrap();
 
     let (status_line, filename) = match &request_line[..] {
-        "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "hello.html"),
+        "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "resources/hello.html"),
         "GET /sleep HTTP/1.1" => {
             thread::sleep(Duration::from_secs(5));
             ("HTTP/1.1 200 OK", "resources/hello.html")

@@ -5,6 +5,31 @@ use std::{
     thread,
 };
 
+/// A pool of worker threads that handles the spawning 
+/// and allocation of jobs to worker threads.
+///
+/// Send closures to executed with ThreadPool.execute()
+///
+/// # Example: Web server
+/// ```
+/// fn main() {
+///
+///     let listener = TcpListener::bind(format!("{127.0.0.1:7878")).unwrap();
+///     let pool = ThreadPool::new(4);
+///
+///     for stream in listener.incoming().take(5) {
+///         let stream = stream.unwrap();
+///         pool.execute(|| {
+///             handle_connection(stream);
+///         });
+///     }
+///
+///     println!("Server shutting down");
+/// }
+///
+/// fn handle_connection(mut stream: TcpStream) {}
+/// ```
+///
 pub struct ThreadPool {
     workers: Vec<Worker>,
     sender: Option<mpsc::Sender<Job>>,
@@ -51,7 +76,7 @@ impl ThreadPool {
         Ok(ThreadPool::new(size))
     }
 
-    /// Send closure to thread pool to be executed
+    /// Send onetime closure to thread pool to be executed
     pub fn execute<F>(&self, f: F)
     where
         F: FnOnce() + Send + 'static,
@@ -62,6 +87,9 @@ impl ThreadPool {
     }
 }
 
+/// Elegant worker shutdown
+///
+/// Makes sure that the channel senders are dropped and that jobs are finished
 impl Drop for ThreadPool {
     fn drop(&mut self) {
         drop(self.sender.take());
@@ -109,6 +137,9 @@ impl Worker {
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
+/// Returned when there is an error in ThreadPool creation
+///
+/// Probably because of an invalid number of threads
 #[derive(Debug)]
 pub struct PoolCreationError {
     details: String,
