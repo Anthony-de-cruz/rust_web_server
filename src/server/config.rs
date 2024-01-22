@@ -1,6 +1,6 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, str::FromStr};
 
-const DEFAULT_THREAD_COUNT: usize = 5;
+pub const DEFAULT_THREAD_COUNT: usize = 5;
 
 pub struct Config {
     pub socket_addr: SocketAddr,
@@ -8,14 +8,15 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn build(args: &[String]) -> Result<Config, &'static str> {
+    pub fn build(args: &[String]) -> Result<Config, Box<dyn std::error::Error>> {
         match args.len() {
             // Default thread count
             3 => {
-                let socket_addr = match Config::build_socket(args[1].clone(), args[2].clone()) {
-                    Ok(n) => n,
-                    Err(e) => return Err("Invalid ip or port"),
-                };
+                let socket_addr =
+                    match SocketAddr::from_str(format!("{}:{}", args[1], args[2]).as_str()) {
+                        Ok(n) => n,
+                        Err(err) => return Err(err)?,
+                    };
                 return Ok(Config {
                     socket_addr,
                     thread_count: DEFAULT_THREAD_COUNT,
@@ -23,25 +24,22 @@ impl Config {
             }
             // Custom thread count
             4 => {
-                let socket_addr = match Config::build_socket(args[1].clone(), args[2].clone()) {
-                    Ok(n) => n,
-                    Err(e) => return Err("Invalid ip or port"),
-                };
+                let socket_addr =
+                    match SocketAddr::from_str(format!("{}:{}", args[1], args[2]).as_str()) {
+                        Ok(n) => n,
+                        Err(_) => return Err("Invalid ip or port")?,
+                    };
 
                 let thread_count = match args[3].parse::<usize>() {
                     Ok(n) => n,
-                    Err(e) => return Err("Invalid thread count"),
+                    Err(err) => return Err(err)?,
                 };
                 return Ok(Config {
                     socket_addr,
                     thread_count,
                 });
             }
-            _ => Err("Invalid number of arguments"),
+            _ => Err("Invalid number of arguments")?,
         }
-    }
-
-    fn build_socket(ip_addr: String, port: String) -> Result<SocketAddr, &'static str> {
-        unimplemented!();
     }
 }
