@@ -20,6 +20,6 @@ Run with:
 
 - [ ] Refactor threadpool
 - [ ] More tests
-- [ ] Provide cli arguments + general config
+- [x] Provide cli arguments + general config
 - [ ] Figure out tui library of choice
 - [ ] Implement tui
