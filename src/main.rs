@@ -1,26 +1,29 @@
 pub mod server;
 
+use server::config::Args;
 use server::config::Config;
 use server::thread_pool::ThreadPool;
 
 use std::{
-    env, fs,
+    fs,
     io::{prelude::*, BufReader},
     net::{TcpListener, TcpStream},
-    thread,
+    process, thread,
     time::Duration,
 };
 
+use clap::Parser;
+
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let config = Config::build(Args::parse()).unwrap_or_else(|err| {
+        eprintln!("Problem parsing arguments: {err}");
+        process::exit(1);
+    });
 
-    let port = "7878";
-    let ip = "127.0.0.1";
+    let listener = TcpListener::bind(config.socket_addr).unwrap();
+    let pool = ThreadPool::new(config.thread_count);
 
-    let listener = TcpListener::bind(format!("{ip}:{port}")).unwrap();
-    let pool = ThreadPool::new(4);
-
-    for stream in listener.incoming().take(5) {
+    for stream in listener.incoming() {
         let stream = stream.unwrap();
         pool.execute(|| {
             handle_connection(stream);
@@ -35,15 +38,21 @@ fn handle_connection(mut stream: TcpStream) {
     let request_line = buf_reader.lines().next().unwrap().unwrap();
 
     let (status_line, filename) = match &request_line[..] {
-        "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "resources/hello.html"),
+        "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "public/index.html"),
         "GET /sleep HTTP/1.1" => {
             thread::sleep(Duration::from_secs(5));
-            ("HTTP/1.1 200 OK", "resources/hello.html")
+            ("HTTP/1.1 200 OK", "public/index.html")
         }
-        _ => ("HTTP/1.1 404 NOT FOUND", "resources/404.html"),
+        _ => ("HTTP/1.1 404 NOT FOUND", "public/404.html"),
     };
 
-    let contents = fs::read_to_string(filename).unwrap();
+    let contents = fs::read_to_string(filename).unwrap_or_else(|err| {
+        eprintln!("Problem with file system: {err}");
+        eprintln!("             Status line: {status_line}");
+        eprintln!("               File name: {filename}");
+        process::exit(1);
+    });
+
     let length = contents.len();
 
     let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
