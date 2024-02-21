@@ -24,12 +24,17 @@ fn main() {
     let pool = ThreadPool::new(config.thread_count);
 
     for stream in listener.incoming() {
-        let stream = stream.unwrap();
-        pool.execute(|| {
-            handle_connection(stream);
-        });
+        match stream {
+            Ok(k) => {
+                pool.execute(|| {
+                    handle_connection(k);
+                });
+            }
+            Err(err) => {
+                eprintln!("TCP stream error: {err}");
+            }
+        }
     }
-
     println!("Server shutting down");
 }
 
