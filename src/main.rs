@@ -1,6 +1,5 @@
 pub mod server;
 
-use server::config::Args;
 use server::config::Config;
 use server::thread_pool::ThreadPool;
 
@@ -12,10 +11,8 @@ use std::{
     time::Duration,
 };
 
-use clap::Parser;
-
 fn main() {
-    let config = Config::build(Args::parse()).unwrap_or_else(|err| {
+    let config = Config::build().unwrap_or_else(|err| {
         eprintln!("Problem parsing arguments: {err}");
         process::exit(1);
     });

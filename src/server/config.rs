@@ -21,13 +21,23 @@ pub struct Args {
 }
 
 impl Config {
-    pub fn build(args: Args) -> Result<Config, Box<dyn std::error::Error>> {
+    pub fn build() -> Result<Config, Box<dyn std::error::Error>> {
+        let args = Args::parse();
+        if args.threads < 1 {
+            Err(format!(
+                "Too few threads: {}, must be at least 1",
+                args.threads
+            ))?
+        }
         match SocketAddr::from_str(&args.socket) {
             Ok(n) => Ok(Config {
                 socket_addr: n,
                 thread_count: args.threads,
             }),
-            Err(_) => return Err("Invalid socket")?,
+            Err(_) => Err(format!(
+                "Invalid socket: {}, must be valid IPv4 or IPv6",
+                &args.socket
+            ))?,
         }
     }
 }
